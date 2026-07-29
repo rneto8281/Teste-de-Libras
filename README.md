@@ -8,7 +8,7 @@ Uma plataforma web interativa para reconhecimento e aprendizado da Língua Brasi
 * Filtro Anti-Jitter: Suavização dos movimentos das mãos através de Média Móvel Exponencial, garantindo maior precisão na leitura[cite: 1].
 * Modos de Uso: Alternância entre o Modo Livre (tradução de texto) e o Modo Quiz (gamificação para aprendizado do alfabeto com pontuação)[cite: 1].
 * Digitação Preditiva: Barra de sugestões de palavras com base em um dicionário embutido para agilizar a formação de frases[cite: 1].
-* Dashboard de Estatísticas: Acompanhamento do progresso do usuário, incluindo dias seguidos (streak), total de sinais feitos e precisão no quiz, salvos diretamente no navegador (localStorage)[cite: 1].
+* Dashboard de Estatísticas: Acompanhamento do progresso do usuário, incluindo dias seguidos (streak), total de sinais feitos e precisão no quiz, salvos diretamente no navegador (localStorage)[cite: Live Server].
 * Acessibilidade de Áudio: Feedback sonoro ao realizar sinais e leitura do texto traduzido em voz alta (Text-to-Speech)[cite: 1].
 * Exportação e Temas: Possibilidade de exportar o texto traduzido para um arquivo `.txt` e suporte nativo a temas Claro e Escuro[cite: 1].
 
@@ -24,4 +24,4 @@ Como o projeto é construído inteiramente com tecnologias web estáticas e CDNs
 
 1. Clone este repositório:
    ```bash
-   git clone [https://github.com/rneto8281/](https://github.com/rneto8281/nome-do-repositorio.git)
+  git clone [https://github.com/rneto8281/Teste-de-Libras.git](https://github.com/rneto8281/Teste-de-Libras.git)
