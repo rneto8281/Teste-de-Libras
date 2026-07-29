@@ -23,5 +23,5 @@ Uma plataforma web interativa para reconhecimento e aprendizado da Língua Brasi
 Como o projeto é construído inteiramente com tecnologias web estáticas e CDNs para as bibliotecas, não é necessário um processo complexo de instalação[cite: Live Server ].
 
 1. Clone este repositório:
-   ```bash
+   ```bash https://github.com/rneto8281/Teste-de-Libras.git
   git clone [https://github.com/rneto8281/Teste-de-Libras.git](https://github.com/rneto8281/Teste-de-Libras.git)
