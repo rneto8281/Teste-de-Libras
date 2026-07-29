@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Desenho por Gestos</title>
+<style>
+  :root{
+    --bg:#05060a;
+    --panel:#0b0e16cc;
+    --accent:#7dd3fc;
+    --accent2:#a78bfa;
+    --accent3:#f472b6;
+    --text:#e6e9f2;
+    --muted:#8b93a7;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;background:var(--bg);
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    color:var(--text);overflow:hidden;
+  }
+  #stage{
+    position:relative;width:100vw;height:100vh;
+    display:flex;align-items:center;justify-content:center;
+  }
+  video{
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    object-fit:cover;transform:scaleX(-1);
+    filter:brightness(0.55) saturate(1.1);
+  }
+  canvas#draw2d, canvas#three-canvas{
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    pointer-events:none;
+  }
+  #vignette{
+    position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.65) 100%);
+  }
+  #hud{
+    position:absolute;top:18px;left:18px;
+    background:var(--panel);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:14px;padding:14px 18px;
+    min-width:220px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.4);
+  }
+  #hud h1{
+    font-size:13px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--muted);margin:0 0 10px 0;font-weight:600;
+  }
+  #status{
+    display:flex;align-items:center;gap:8px;margin-bottom:8px;
+    font-size:13px;
+  }
+  #dot{
+    width:8px;height:8px;border-radius:50%;background:#ef4444;
+    box-shadow:0 0 8px #ef4444;transition:all .3s;
+  }
+  #dot.live{background:#4ade80;box-shadow:0 0 8px #4ade80;}
+  #gesture{
+    font-size:22px;font-weight:700;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    margin:4px 0 2px 0;
+  }
+  #gesture-sub{font-size:12px;color:var(--muted);}
+  #legend{
+    position:absolute;bottom:18px;left:18px;
+    background:var(--panel);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:14px;padding:12px 16px;
+    font-size:12px;color:var(--muted);
+    box-shadow:0 8px 30px rgba(0,0,0,0.4);
+  }
+  #legend div{margin:3px 0;display:flex;gap:8px;align-items:center;}
+  #legend b{color:var(--text);min-width:100px;display:inline-block;}
+  #clearBtn{
+    position:absolute;top:18px;right:18px;
+    background:var(--panel);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,0.08);
+    color:var(--text);padding:10px 18px;border-radius:12px;
+    font-size:13px;cursor:pointer;pointer-events:all;
+    transition:all .2s;
+  }
+  #clearBtn:hover{border-color:var(--accent);color:var(--accent);}
+  #loading{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;
+    background:var(--bg);z-index:10;
+  }
+  #loading .spin{
+    width:40px;height:40px;border-radius:50%;
+    border:3px solid rgba(255,255,255,0.15);
+    border-top-color:var(--accent);
+    animation:spin 1s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loading p{color:var(--muted);font-size:14px;}
+  #err{
+    position:absolute;inset:0;display:none;flex-direction:column;
+    align-items:center;justify-content:center;gap:10px;
+    background:var(--bg);z-index:11;text-align:center;padding:24px;
+  }
+  #err h2{color:var(--accent3);margin:0;}
+  #err p{color:var(--muted);max-width:420px;font-size:14px;line-height:1.5;}
+</style>
+</head>
+<body>
+<div id="stage">
+  <video id="video" playsinline autoplay muted></video>
+  <canvas id="draw2d"></canvas>
+  <canvas id="three-canvas"></canvas>
+  <div id="vignette"></div>
+
+  <div id="hud">
+    <h1>Rastreamento de Mão</h1>
+    <div id="status"><div id="dot"></div><span id="status-text">Iniciando câmera…</span></div>
+    <div id="gesture">—</div>
+    <div id="gesture-sub">levante dedos para desenhar</div>
+  </div>
+
+  <div id="legend">
+    <div><b>1 dedo</b> desenha linha livre</div>
+    <div><b>2 dedos</b> quadrado</div>
+    <div><b>3 dedos</b> triângulo</div>
+    <div><b>4 dedos</b> círculo</div>
+    <div><b>5 dedos</b> cubo 3D</div>
+    <div><b>mão fechada</b> limpa a tela</div>
+  </div>
+
+  <button id="clearBtn" style="pointer-events:all;">Limpar tudo</button>
+
+  <div id="loading">
+    <div class="spin"></div>
+    <p>Carregando modelo de rastreamento de mão…</p>
+  </div>
+
+  <div id="err">
+    <h2>Não foi possível acessar a câmera</h2>
+    <p>Verifique se você concedeu permissão de câmera para esta página no navegador e se nenhum outro app está usando a câmera. Recarregue a página depois de permitir o acesso.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script>
+(function(){
+  const video = document.getElementById('video');
+  const canvas2d = document.getElementById('draw2d');
+  const ctx = canvas2d.getContext('2d');
+  const threeCanvas = document.getElementById('three-canvas');
+  const statusDot = document.getElementById('dot');
+  const statusText = document.getElementById('status-text');
+  const gestureLabel = document.getElementById('gesture');
+  const gestureSub = document.getElementById('gesture-sub');
+  const loadingEl = document.getElementById('loading');
+  const errEl = document.getElementById('err');
+  const clearBtn = document.getElementById('clearBtn');
+
+  function resize(){
+    canvas2d.width = window.innerWidth;
+    canvas2d.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- THREE.JS SETUP (cube layer) ----------
+  const renderer = new THREE.WebGLRenderer({canvas: threeCanvas, alpha:true, antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  const scene = new THREE.Scene();
+  const camera3 = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 100);
+  camera3.position.z = 6;
+
+  const light1 = new THREE.DirectionalLight(0x7dd3fc, 1.2);
+  light1.position.set(3,4,5);
+  scene.add(light1);
+  const light2 = new THREE.DirectionalLight(0xa78bfa, 0.8);
+  light2.position.set(-3,-2,-4);
+  scene.add(light2);
+  scene.add(new THREE.AmbientLight(0x404060, 0.6));
+
+  const cubeGroup = new THREE.Group();
+  const geo = new THREE.BoxGeometry(2,2,2);
+  const edges = new THREE.EdgesGeometry(geo);
+  const wire = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color:0x7dd3fc, linewidth:2}));
+  const mat = new THREE.MeshPhongMaterial({
+    color:0x1a2140, transparent:true, opacity:0.35,
+    shininess:80, emissive:0x2a1a4a, emissiveIntensity:0.4
+  });
+  const solid = new THREE.Mesh(geo, mat);
+  cubeGroup.add(solid);
+  cubeGroup.add(wire);
+  cubeGroup.visible = false;
+  cubeGroup.scale.set(0.01,0.01,0.01);
+  scene.add(cubeGroup);
+
+  let cubeTargetScale = 0.01;
+  let cubeAutoRotate = 0;
+
+  function animate3D(){
+    requestAnimationFrame(animate3D);
+    cubeGroup.scale.x += (cubeTargetScale - cubeGroup.scale.x)*0.15;
+    cubeGroup.scale.y += (cubeTargetScale - cubeGroup.scale.y)*0.15;
+    cubeGroup.scale.z += (cubeTargetScale - cubeGroup.scale.z)*0.15;
+    cubeGroup.visible = cubeGroup.scale.x > 0.02;
+    cubeGroup.rotation.y += 0.006 + cubeAutoRotate*0.02;
+    cubeGroup.rotation.x += 0.002;
+    renderer.render(scene, camera3);
+  }
+  animate3D();
+
+  window.addEventListener('resize', ()=>{
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera3.aspect = window.innerWidth/window.innerHeight;
+    camera3.updateProjectionMatrix();
+  });
+
+  // ---------- 2D DRAWING STATE ----------
+  let strokes = [];       // completed freehand strokes: array of {points:[{x,y}], hue}
+  let currentStroke = null;
+  let shapeFlashes = [];  // temporary shapes {type,x,y,size,life,hue}
+  let lastGestureCount = -1;
+  let gestureHoldFrames = 0;
+
+  function clearAll(){
+    strokes = [];
+    currentStroke = null;
+    shapeFlashes = [];
+    cubeTargetScale = 0.01;
+  }
+  clearBtn.addEventListener('click', clearAll);
+
+  function hueForCount(n){
+    return {1:195, 2:260, 3:330, 4:160, 5:280}[n] || 200;
+  }
+
+  function drawFrame(){
+    ctx.clearRect(0,0,canvas2d.width, canvas2d.height);
+
+    // freehand strokes
+    for(const s of strokes){
+      if(s.points.length < 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(s.points[0].x, s.points[0].y);
+      for(let i=1;i<s.points.length;i++) ctx.lineTo(s.points[i].x, s.points[i].y);
+      ctx.strokeStyle = `hsla(${s.hue},90%,65%,0.9)`;
+      ctx.lineWidth = 4;
+      ctx.lineJoin='round'; ctx.lineCap='round';
+      ctx.shadowColor = `hsla(${s.hue},90%,60%,0.8)`;
+      ctx.shadowBlur = 12;
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+
+    // shape flashes (square/triangle/circle)
+    for(let i=shapeFlashes.length-1;i>=0;i--){
+      const f = shapeFlashes[i];
+      f.life -= 0.02;
+      if(f.life <= 0){ shapeFlashes.splice(i,1); continue; }
+      const alpha = Math.min(1, f.life);
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.strokeStyle = `hsla(${f.hue},90%,65%,${alpha})`;
+      ctx.fillStyle = `hsla(${f.hue},90%,55%,${alpha*0.15})`;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = `hsla(${f.hue},90%,60%,${alpha})`;
+      ctx.shadowBlur = 16;
+      const s = f.size;
+      ctx.beginPath();
+      if(f.type==='square'){
+        ctx.rect(-s/2,-s/2,s,s);
+      } else if(f.type==='triangle'){
+        ctx.moveTo(0,-s/2);
+        ctx.lineTo(s/2,s/2);
+        ctx.lineTo(-s/2,s/2);
+        ctx.closePath();
+      } else if(f.type==='circle'){
+        ctx.arc(0,0,s/2,0,Math.PI*2);
+      }
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.shadowBlur = 0;
+
+    requestAnimationFrame(drawFrame);
+  }
+  drawFrame();
+
+  // ---------- HAND LOGIC ----------
+  function countFingers(landmarks, handedness){
+    // landmarks: 21 points, normalized [0,1]
+    const tips = [4,8,12,16,20];
+    const pips = [3,6,10,14,18];
+    let count = 0;
+    const isRight = handedness === 'Right'; // mediapipe label is mirrored vs selfie view already handled by lib
+
+    // thumb: compare x of tip vs pip depending on hand side
+    const thumbTip = landmarks[4], thumbPip = landmarks[3], thumbMcp = landmarks[2];
+    const thumbExtended = Math.abs(thumbTip.x - thumbMcp.x) > 0.08 &&
+                           (isRight ? thumbTip.x < thumbPip.x : thumbTip.x > thumbPip.x);
+    if(thumbExtended) count++;
+
+    for(let i=1;i<5;i++){
+      const tip = landmarks[tips[i]];
+      const pip = landmarks[pips[i]];
+      if(tip.y < pip.y - 0.02) count++;
+    }
+    return count;
+  }
+
+  function gestureName(n){
+    return {0:'Mão fechada — limpando', 1:'1 dedo — Linha livre',2:'2 dedos — Quadrado',
+            3:'3 dedos — Triângulo',4:'4 dedos — Círculo',5:'5 dedos — Cubo 3D'}[n] || '—';
+  }
+
+  const hands = new Hands({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+  hands.setOptions({
+    maxNumHands:1,
+    modelComplexity:1,
+    minDetectionConfidence:0.6,
+    minTrackingConfidence:0.6
+  });
+
+  hands.onResults((results)=>{
+    if(loadingEl.style.display !== 'none'){
+      loadingEl.style.display='none';
+    }
+    statusDot.classList.add('live');
+
+    if(!results.multiHandLandmarks || results.multiHandLandmarks.length===0){
+      statusText.textContent = 'Nenhuma mão detectada';
+      gestureLabel.textContent = '—';
+      gestureSub.textContent = 'mostre a mão para a câmera';
+      currentStroke = null;
+      cubeTargetScale = Math.max(0.01, cubeTargetScale*0.9);
+      return;
+    }
+    statusText.textContent = 'Mão detectada';
+
+    const lm = results.multiHandLandmarks[0];
+    const handednessLabel = results.multiHandedness && results.multiHandedness[0] ?
+        results.multiHandedness[0].label : 'Right';
+
+    const count = countFingers(lm, handednessLabel);
+    gestureLabel.textContent = count;
+    gestureSub.textContent = gestureName(count);
+
+    // fingertip position (index finger tip = landmark 8), mirrored for selfie view
+    const tip = lm[8];
+    const px = (1 - tip.x) * canvas2d.width; // mirror because video is mirrored
+    const py = tip.y * canvas2d.height;
+
+    // stability: require holding gesture briefly to avoid flicker triggering
+    if(count === lastGestureCount){
+      gestureHoldFrames++;
+    } else {
+      gestureHoldFrames = 0;
+      lastGestureCount = count;
+    }
+
+    if(count === 1){
+      cubeTargetScale = Math.max(0.01, cubeTargetScale*0.85);
+      if(!currentStroke){
+        currentStroke = {points:[], hue:hueForCount(1)};
+        strokes.push(currentStroke);
+        if(strokes.length > 12) strokes.shift();
+      }
+      currentStroke.points.push({x:px,y:py});
+      if(currentStroke.points.length > 400) currentStroke.points.shift();
+    } else {
+      currentStroke = null;
+    }
+
+    if(count===2 || count===3 || count===4){
+      cubeTargetScale = Math.max(0.01, cubeTargetScale*0.85);
+      if(gestureHoldFrames % 14 === 0){
+        const type = count===2?'square':count===3?'triangle':'circle';
+        shapeFlashes.push({type, x:px, y:py, size:140, life:1.6, hue:hueForCount(count)});
+      }
+    }
+
+    if(count===5){
+      cubeTargetScale = 1;
+      // rotate cube slightly based on hand horizontal position
+      cubeAutoRotate = (0.5 - tip.x) * 2;
+    } else {
+      cubeAutoRotate = 0;
+    }
+
+    if(count===0 && gestureHoldFrames > 6){
+      clearAll();
+      gestureHoldFrames = 0;
+    }
+  });
+
+  const camera = new Camera(video, {
+    onFrame: async ()=>{ await hands.send({image: video}); },
+    width: 1280,
+    height: 720
+  });
+
+  camera.start().catch((e)=>{
+    console.error(e);
+    loadingEl.style.display='none';
+    errEl.style.display='flex';
+  });
+
+})();
+</script>
+</body>
+</html>

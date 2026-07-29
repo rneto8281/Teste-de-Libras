@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libras AI - Pro Platform Enterprise</title>
+
+  <!-- CSS com Suporte a Temas, Modais, Stats e Sugestões Preditivas -->
+  <style>
+    :root {
+      --bg-color: #f8f9fa;
+      --card-bg: #ffffff;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --success: #10b981;
+      --text: #1f2937;
+      --border: #e5e7eb;
+      --item-bg: #f8f9fa;
+      --placeholder: #9ca3af;
+      --scrollbar: #cbd5e1;
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --success: #059669;
+      --text: #f8fafc;
+      --border: #334155;
+      --item-bg: #0f172a;
+      --placeholder: #64748b;
+      --scrollbar: #475569;
+    }
+
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    body {
+      display: flex;
+      height: 100vh;
+      background-color: var(--bg-color);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* Menu Lateral */
+    aside {
+      width: 350px;
+      background: var(--card-bg);
+      border-right: 1px solid var(--border);
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    aside h2 { font-size: 1.1rem; color: var(--primary); }
+
+    .header-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-icon {
+      background: var(--bg-color);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .btn-icon:hover { border-color: var(--primary); }
+
+    /* Card de Quiz */
+    .quiz-card {
+      background: var(--item-bg);
+      border: 2px dashed var(--primary);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      display: none;
+    }
+    .quiz-card.active { display: block; }
+    .quiz-target { font-size: 1.6rem; font-weight: bold; color: var(--primary); }
+    .quiz-score { font-size: 0.85rem; margin-top: 4px; font-weight: 600; color: var(--success); }
+
+    /* Lista de Gestos */
+    .word-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+      padding-right: 4px;
+      flex: 1;
+    }
+    .word-list::-webkit-scrollbar { width: 6px; }
+    .word-list::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 4px; }
+
+    .word-item {
+      padding: 8px 10px;
+      background: var(--item-bg);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .letter-badge {
+      background: var(--primary);
+      color: white;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn-action {
+      padding: 10px;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .btn-clear { background: #ef4444; }
+    .btn-clear:hover { background: #dc2626; }
+    .btn-backspace { background: #f59e0b; }
+    .btn-backspace:hover { background: #d97706; }
+
+    /* Área Principal */
+    main {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .display-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-group { display: flex; gap: 8px; }
+
+    .btn-sm {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .text-display {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      min-height: 80px;
+      max-height: 100px;
+      overflow-y: auto;
+      font-size: 1.4rem;
+      line-height: 1.5;
+      color: var(--text);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+      word-break: break-all;
+    }
+
+    .text-placeholder { color: var(--placeholder); font-size: 0.95rem; font-style: italic; }
+
+    /* Barra Preditiva de Palavras */
+    .suggestions-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      min-height: 36px;
+    }
+
+    .suggestion-chip {
+      background: var(--item-bg);
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .suggestion-chip:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Feed da Câmera */
+    .camera-container {
+      position: relative;
+      flex: 1;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    video, canvas {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Badges na Câmera */
+    .camera-badges {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .confidence-badge {
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .confidence-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+    .confidence-dot.active { background: var(--success); }
+
+    /* Modais */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 28px;
+      border-radius: 16px;
+      max-width: 480px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .modal h1 { margin-bottom: 12px; font-size: 1.4rem; color: var(--primary); }
+    .modal p { color: var(--text); margin-bottom: 20px; font-size: 0.95rem; opacity: 0.8; }
+
+    /* Grid do Dashboard */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .stat-box {
+      background: var(--item-bg);
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 10px;
+    }
+
+    .stat-val { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+    .stat-lbl { font-size: 0.75rem; opacity: 0.8; margin-top: 4px; }
+
+    .btn-start {
+      padding: 10px 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+
+  <!-- CDNs do MediaPipe -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+  <!-- Modal Inicial -->
+  <div class="overlay" id="startModal">
+    <div class="modal">
+      <h1>Libras AI - Platform Enterprise</h1>
+      <p>Suporte a duas mãos, preditor de palavras, anti-jitter e dashboard de progresso.</p>
+      <button class="btn-start" onclick="iniciarAplicacao()">Começar Agora</button>
+    </div>
+  </div>
+
+  <!-- Modal Dashboard Stats -->
+  <div class="overlay" id="statsModal" style="display: none;">
+    <div class="modal">
+      <h1>📊 Meu Progresso</h1>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-val" id="statStreak">1</div>
+          <div class="stat-lbl">Dias Seguidos 🔥</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="statTotal">0</div>
+          <div class="stat-lbl">Sinais Feitos</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="statAccuracy">100%</div>
+          <div class="stat-lbl">Precisão Quiz</div>
+        </div>
+      </div>
+      <button class="btn-start" onclick="fecharStats()">Fechar Dashboard</button>
+    </div>
+  </div>
+
+  <!-- Menu Lateral -->
+  <aside>
+    <div class="sidebar-header">
+      <h2>Guia Libras</h2>
+      <div class="header-actions">
+        <button class="btn-icon" onclick="abrirStats()" title="Estatísticas">📊 Stats</button>
+        <button class="btn-icon" id="modeBtn" onclick="toggleModo()" title="Alternar Modo">🎮 Quiz</button>
+        <button class="btn-icon" id="themeToggleBtn" onclick="toggleTheme()" title="Alternar Tema">🌙</button>
+      </div>
+    </div>
+
+    <!-- Quiz -->
+    <div class="quiz-card" id="quizCard">
+      <div style="font-size: 0.8rem; opacity: 0.8;">FAÇA O SINAL DA LETRA:</div>
+      <div class="quiz-target" id="quizTarget">A</div>
+      <div class="quiz-score" id="quizScore">Pontuação: 0 pts</div>
+    </div>
+    
+    <ul class="word-list">
+      <li class="word-item"><span class="letter-badge">A</span> Mão fechada, polegar ao lado</li>
+      <li class="word-item"><span class="letter-badge">B</span> Mão aberta, polegar recolhido</li>
+      <li class="word-item"><span class="letter-badge">D</span> Indicador levantado</li>
+      <li class="word-item"><span class="letter-badge">I</span> Dedo mínimo levantado</li>
+      <li class="word-item"><span class="letter-badge">L</span> Indicador e polegar em "L"</li>
+      <li class="word-item"><span class="letter-badge">U</span> Indicador e médio juntos</li>
+      <li class="word-item"><span class="letter-badge">V</span> Indicador e médio em "V"</li>
+      <li class="word-item"><span class="letter-badge">W</span> Três dedos levantados</li>
+      <li class="word-item"><span class="letter-badge">Y</span> Polegar e mínimo abertos</li>
+      <li class="word-item"><span class="letter-badge">✋ Espaço</span> Mão toda aberta estendida</li>
+    </ul>
+
+    <div class="controls-grid">
+      <button class="btn-action btn-backspace" onclick="apagarUltimo()">⌫ Apagar</button>
+      <button class="btn-action btn-clear" onclick="limparTexto()">Limpar Tudo</button>
+    </div>
+  </aside>
+
+  <!-- Área Principal -->
+  <main>
+    <div>
+      <div class="display-header">
+        <span style="font-size: 0.85rem; font-weight: 600; opacity: 0.7;">TEXTO RECONHECIDO:</span>
+        <div class="btn-group">
+          <button class="btn-sm" onclick="exportarTexto()">📄 Exportar .txt</button>
+          <button class="btn-sm" onclick="ouvirFrase()">🔊 Ouvir</button>
+        </div>
+      </div>
+      <div class="text-display" id="outputArea">
+        <span class="text-placeholder">Sua escrita em Libras aparecerá aqui...</span>
+      </div>
+    </div>
+
+    <!-- Sugestões Preditivas -->
+    <div class="suggestions-bar" id="suggestionsBar">
+      <span style="font-size: 0.8rem; opacity: 0.6;">Sugestões:</span>
+      <!-- Chips gerados via JS -->
+    </div>
+
+    <!-- Câmera -->
+    <div class="camera-container">
+      <div class="camera-badges">
+        <div class="confidence-badge">
+          <div class="confidence-dot" id="confDot"></div>
+          <span id="confText">Aguardando mão...</span>
+        </div>
+        <div class="confidence-badge" id="handCountBadge">
+          👐 Mãos: 0/2
+        </div>
+      </div>
+      <video id="webcam" playsinline></video>
+      <canvas id="outputCanvas"></canvas>
+    </div>
+  </main>
+
+  <script>
+    const videoElement = document.getElementById('webcam');
+    const canvasElement = document.getElementById('outputCanvas');
+    const canvasCtx = canvasElement.getContext('2d');
+    const outputArea = document.getElementById('outputArea');
+    const confDot = document.getElementById('confDot');
+    const confText = document.getElementById('confText');
+    const handCountBadge = document.getElementById('handCountBadge');
+    const suggestionsBar = document.getElementById('suggestionsBar');
+
+    let textoAcumulado = "";
+    let ultimoSinal = "";
+    let tempoUltimoSinal = 0;
+    let modoQuiz = false;
+    let pontuacao = 0;
+    let acertosQuiz = 0;
+    let tentativasQuiz = 0;
+    let letraAlvoQuiz = "A";
+    const listaLetrasQuiz = ["A", "B", "D", "I", "L", "U", "V", "W", "Y"];
+
+    // Dicionário para Preditivo
+    const dicionario = ["AULA", "AMOR", "BOM", "BRASIL", "CASA", "DIA", "LIBRAS", "OI", "OBRIGADO", "VOCE"];
+
+    // --- FILTRO ANTI-JITTER (MÉDIA MÓVEL EXPONENCIAL) ---
+    let pontosAnteriores = null;
+    function suavizarPontos(landmarks) {
+      if (!pontosAnteriores) {
+        pontosAnteriores = landmarks;
+        return landmarks;
+      }
+      const alpha = 0.6; // Fator de suavização
+      const suavizados = landmarks.map((p, i) => ({
+        x: p.x * alpha + pontosAnteriores[i].x * (1 - alpha),
+        y: p.y * alpha + pontosAnteriores[i].y * (1 - alpha),
+        z: p.z * alpha + pontosAnteriores[i].z * (1 - alpha)
+      }));
+      pontosAnteriores = suavizados;
+      return suavizados;
+    }
+
+    // --- SISTEMA DE ESTATÍSTICAS (LOCALSTORAGE) ---
+    function carregarStats() {
+      const hoje = new Date().toDateString();
+      let lastDate = localStorage.getItem('libras_last_date');
+      let streak = parseInt(localStorage.getItem('libras_streak') || '1');
+
+      if (lastDate && lastDate !== hoje) {
+        const ontem = new Date();
+        ontem.setDate(ontem.getDate() - 1);
+        if (lastDate === ontem.toDateString()) {
+          streak += 1;
+        } else {
+          streak = 1;
+        }
+      }
+      localStorage.setItem('libras_last_date', hoje);
+      localStorage.setItem('libras_streak', streak.toString());
+
+      document.getElementById('statStreak').textContent = streak;
+      document.getElementById('statTotal').textContent = localStorage.getItem('libras_total_signs') || '0';
+      
+      let acc = localStorage.getItem('libras_accuracy') || '100';
+      document.getElementById('statAccuracy').textContent = acc + '%';
+    }
+
+    function registrarSinal() {
+      let total = parseInt(localStorage.getItem('libras_total_signs') || '0') + 1;
+      localStorage.setItem('libras_total_signs', total.toString());
+      document.getElementById('statTotal').textContent = total;
+    }
+
+    function abrirStats() {
+      carregarStats();
+      document.getElementById('statsModal').style.display = 'flex';
+    }
+
+    function fecharStats() {
+      document.getElementById('statsModal').style.display = 'none';
+    }
+
+    // --- EXPORTAR TEXTO ---
+    function exportarTexto() {
+      if (!textoAcumulado.trim()) return alert("Nada para exportar!");
+      const blob = new Blob([textoAcumulado], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'libras_texto.txt';
+      a.click();
+    }
+
+    // --- PREDIÇÃO DE PALAVRAS ---
+    function atualizarSugestoes() {
+      const palavras = textoAcumulado.trim().split(" ");
+      const ultimaPalavra = palavras[palavras.length - 1].toUpperCase();
+
+      suggestionsBar.innerHTML = `<span style="font-size: 0.8rem; opacity: 0.6;">Sugestões:</span>`;
+
+      if (!ultimaPalavra) return;
+
+      const correspondencias = dicionario.filter(p => p.startsWith(ultimaPalavra) && p !== ultimaPalavra);
+
+      correspondencias.slice(0, 3).forEach(palavra => {
+        const chip = document.createElement('div');
+        chip.className = 'suggestion-chip';
+        chip.textContent = palavra;
+        chip.onclick = () => aplicarSugestao(palavra);
+        suggestionsBar.appendChild(chip);
+      });
+    }
+
+    function aplicarSugestao(palavraCompleta) {
+      let palavras = textoAcumulado.trim().split(" ");
+      palavras[palavras.length - 1] = palavraCompleta;
+      textoAcumulado = palavras.join(" ") + " ";
+      outputArea.innerHTML = textoAcumulado;
+      atualizarSugestoes();
+    }
+
+    // --- SINTETIZADOR DE AUDIO ---
+    function tocarSom(frequencia = 440, tipo = 'sine', duracao = 0.1) {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = tipo;
+        osc.frequency.setValueAtTime(frequencia, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duracao);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duracao);
+      } catch(e) {}
+    }
+
+    // --- VOZ ---
+    function falarTexto(texto) {
+      if ('speechSynthesis' in window && texto) {
+        window.speechSynthesis.cancel();
+        const mensagem = new SpeechSynthesisUtterance(texto);
+        mensagem.lang = 'pt-BR';
+        window.speechSynthesis.speak(mensagem);
+      }
+    }
+
+    function ouvirFrase() {
+      falarTexto(textoAcumulado || "Nenhum texto escrito.");
+    }
+
+    // --- MODO QUIZ ---
+    function toggleModo() {
+      modoQuiz = !modoQuiz;
+      const btn = document.getElementById('modeBtn');
+      if (modoQuiz) {
+        btn.textContent = '📖 Livre';
+        document.getElementById('quizCard').classList.add('active');
+        proximaLetraQuiz();
+      } else {
+        btn.textContent = '🎮 Quiz';
+        document.getElementById('quizCard').classList.remove('active');
+      }
+    }
+
+    function proximaLetraQuiz() {
+      letraAlvoQuiz = listaLetrasQuiz[Math.floor(Math.random() * listaLetrasQuiz.length)];
+      document.getElementById('quizTarget').textContent = letraAlvoQuiz;
+    }
+
+    // --- TEMA ---
+    function aplicarTema(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('themeToggleBtn').textContent = theme === 'dark' ? '☀️' : '🌙';
+      localStorage.setItem('themePreference', theme);
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      aplicarTema(current === 'dark' ? 'light' : 'dark');
+    }
+
+    (function carregarInicial() {
+      aplicarTema(localStorage.getItem('themePreference') || 'light');
+      carregarStats();
+    })();
+
+    function iniciarAplicacao() {
+      document.getElementById('startModal').style.display = 'none';
+      falarTexto("Aplicação iniciada. Suporte a duas mãos ativo.");
+      iniciarCamera();
+    }
+
+    // --- MEDIAPIPE HANDS (CONFIGURADO PARA 2 MÃOS) ---
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 2, // Suporte a duas mãos simultâneas
+      modelComplexity: 1,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+
+    hands.onResults(onResults);
+
+    async function iniciarCamera() {
+      try {
+        const camera = new Camera(videoElement, {
+          onFrame: async () => { await hands.send({ image: videoElement }); },
+          width: 1280,
+          height: 720
+        });
+        await camera.start();
+      } catch (error) {
+        alert("Erro ao acessar a câmera.");
+      }
+    }
+
+    // --- RASTREAMENTO E PROCESSAMENTO ---
+    function onResults(results) {
+      canvasElement.width = videoElement.videoWidth;
+      canvasElement.height = videoElement.videoHeight;
+
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+      const numMaos = results.multiHandLandmarks ? results.multiHandLandmarks.length : 0;
+      handCountBadge.textContent = `👐 Mãos: ${numMaos}/2`;
+
+      if (numMaos > 0) {
+        // Suaviza a mão principal com o filtro Anti-Jitter
+        const landmarksSuaves = suavizarPontos(results.multiHandLandmarks[0]);
+
+        // Desenha todas as mãos detectadas
+        for (const landmarks of results.multiHandLandmarks) {
+          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#6366f1', lineWidth: 3 });
+          drawLandmarks(canvasCtx, landmarks, { color: '#a5b4fc', lineWidth: 1, radius: 4 });
+        }
+
+        const resultado = reconhecerGesto(landmarksSuaves);
+        
+        if (resultado) {
+          confDot.classList.add('active');
+          confText.textContent = `Sinal: ${resultado.simbolo} (${resultado.confianca}%)`;
+          adicionarSimbolo(resultado.simbolo);
+        } else {
+          confDot.classList.remove('active');
+          confText.textContent = "Mão detectada...";
+        }
+      } else {
+        pontosAnteriores = null;
+        confDot.classList.remove('active');
+        confText.textContent = "Aguardando mão...";
+      }
+
+      canvasCtx.restore();
+    }
+
+    function reconhecerGesto(lm) {
+      const indUp = lm[8].y < lm[6].y;
+      const medUp = lm[12].y < lm[10].y;
+      const aneUp = lm[16].y < lm[14].y;
+      const minUp = lm[20].y < lm[18].y;
+      const polegarAberto = Math.abs(lm[4].x - lm[2].x) > 0.05;
+
+      if (indUp && medUp && aneUp && minUp && polegarAberto) return { simbolo: "ESPAÇO", confianca: 96 };
+      if (!indUp && !medUp && !aneUp && !minUp && polegarAberto) return { simbolo: "A", confianca: 94 };
+      if (indUp && medUp && aneUp && minUp && !polegarAberto) return { simbolo: "B", confianca: 92 };
+      if (indUp && !medUp && !aneUp && !minUp && !polegarAberto) return { simbolo: "D", confianca: 90 };
+      if (!indUp && !medUp && !aneUp && minUp && !polegarAberto) return { simbolo: "I", confianca: 93 };
+      if (indUp && !medUp && !aneUp && !minUp && polegarAberto) return { simbolo: "L", confianca: 95 };
+      
+      const dedosJuntos = Math.abs(lm[8].x - lm[12].x) < 0.04;
+      if (indUp && medUp && !aneUp && !minUp && dedosJuntos) return { simbolo: "U", confianca: 90 };
+      if (indUp && medUp && !aneUp && !minUp && !dedosJuntos) return { simbolo: "V", confianca: 94 };
+      if (indUp && medUp && aneUp && !minUp) return { simbolo: "W", confianca: 91 };
+      if (!indUp && !medUp && !aneUp && minUp && polegarAberto) return { simbolo: "Y", confianca: 93 };
+
+      return null;
+    }
+
+    // --- GERENCIADOR DE DADOS ---
+    function adicionarSimbolo(simbolo) {
+      const agora = Date.now();
+      if (simbolo !== ultimoSinal || (agora - tempoUltimoSinal) > 1200) {
+        
+        if (modoQuiz) {
+          tentativasQuiz++;
+          if (simbolo === letraAlvoQuiz) {
+            acertosQuiz++;
+            pontuacao += 10;
+            document.getElementById('quizScore').textContent = `Pontuação: ${pontuacao} pts`;
+            tocarSom(600, 'triangle', 0.15);
+            proximaLetraQuiz();
+          }
+          let precisao = Math.round((acertosQuiz / tentativasQuiz) * 100);
+          localStorage.setItem('libras_accuracy', precisao.toString());
+        } else {
+          if (simbolo === "ESPAÇO") {
+            textoAcumulado += " ";
+            tocarSom(300, 'sine', 0.08);
+          } else {
+            textoAcumulado += simbolo;
+            tocarSom(587.33, 'sine', 0.08);
+          }
+          outputArea.innerHTML = textoAcumulado;
+          atualizarSugestoes();
+        }
+
+        registrarSinal();
+        ultimoSinal = simbolo;
+        tempoUltimoSinal = agora;
+      }
+    }
+
+    function apagarUltimo() {
+      tocarSom(200, 'sawtooth', 0.1);
+      textoAcumulado = textoAcumulado.slice(0, -1);
+      outputArea.innerHTML = textoAcumulado || `<span class="text-placeholder">Sua escrita em Libras aparecerá aqui...</span>`;
+      atualizarSugestoes();
+    }
+
+    function limparTexto() {
+      tocarSom(150, 'sawtooth', 0.15);
+      textoAcumulado = "";
+      outputArea.innerHTML = `<span class="text-placeholder">Sua escrita em Libras aparecerá aqui...</span>`;
+      ultimoSinal = "";
+      atualizarSugestoes();
+    }
+  </script>
+</body>
+</html>
